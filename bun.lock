@@ -5,6 +5,7 @@
     "": {
       "name": "janus",
       "dependencies": {
+        "@ai-sdk/anthropic": "^3.0.36",
         "@eleven-am/hu-sdk": "^0.0.6",
         "@microsoft/microsoft-graph-client": "^3.0.7",
         "@tanstack/react-router": "^1.158.0",
@@ -44,6 +45,8 @@
     },
   },
   "packages": {
+    "@ai-sdk/anthropic": ["@ai-sdk/anthropic@3.0.37", "", { "dependencies": { "@ai-sdk/provider": "3.0.7", "@ai-sdk/provider-utils": "4.0.13" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-tEgcJPw+a6obbF+SHrEiZsx3DNxOHqeY8bK4IpiNsZ8YPZD141R34g3lEAaQnmNN5mGsEJ8SXoEDabuzi8wFJQ=="],
+
     "@ai-sdk/gateway": ["@ai-sdk/gateway@3.0.32", "", { "dependencies": { "@ai-sdk/provider": "3.0.7", "@ai-sdk/provider-utils": "4.0.13", "@vercel/oidc": "3.1.0" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-7clZRr07P9rpur39t1RrbIe7x8jmwnwUWI8tZs+BvAfX3NFgdSVGGIaT7bTz2pb08jmLXzTSDbrOTqAQ7uBkBQ=="],
 
     "@ai-sdk/provider": ["@ai-sdk/provider@3.0.7", "", { "dependencies": { "json-schema": "^0.4.0" } }, "sha512-VkPLrutM6VdA924/mG8OS+5frbVTcu6e046D2bgDo00tehBANR1QBJ/mPcZ9tXMFOsVcm6SQArOregxePzTFPw=="],
