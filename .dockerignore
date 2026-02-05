@@ -1,0 +1,13 @@
+node_modules
+.output
+.env
+.env.*
+*.db
+*.db-journal
+data/
+*.pem
+*.key
+.git
+.gitignore
+Dockerfile
+.dockerignore

@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.output/
+*.db
+*.db-journal
+.env
+.env.*
+!.env.example
+.DS_Store
+*.pem
+*.key
+data/
+coverage/
+.idea/
+package-lock.json
