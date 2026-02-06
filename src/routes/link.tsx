@@ -6,7 +6,7 @@ import { db } from '@/db'
 import { account } from '@/db/auth.schema'
 import { eq } from 'drizzle-orm'
 import { signIn, oauth2 } from '@/lib/auth-client'
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 const getLinkData = createServerFn({ method: 'GET' }).handler(async () => {
   const request = getRequest()
@@ -37,9 +37,39 @@ export const Route = createFileRoute('/link')({
   component: LinkPage,
 })
 
+function useLocalStorage<T>(key: string) {
+  const [value, setValue] = useState<T | null>(() => {
+    if (typeof window === 'undefined') return null
+    const stored = localStorage.getItem(key)
+    if (!stored) return null
+    try { return JSON.parse(stored) as T } catch { return stored as T }
+  })
+
+  const set = useCallback((newValue: T) => {
+    localStorage.setItem(key, typeof newValue === 'string' ? newValue : JSON.stringify(newValue))
+    setValue(newValue)
+  }, [key])
+
+  const remove = useCallback(() => {
+    localStorage.removeItem(key)
+    setValue(null)
+  }, [key])
+
+  return [value, set, remove] as const
+}
+
 function LinkPage() {
   const data = Route.useLoaderData()
   const linkTriggered = useRef(false)
+  const [redirectUrl, setRedirectUrl, clearRedirectUrl] = useLocalStorage<string>("janus_link_redirect")
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const url = params.get("redirect_url") || params.get("redirect_uri")
+    if (url) {
+      setRedirectUrl(url)
+    }
+  }, [setRedirectUrl])
 
   useEffect(() => {
     if (data.isAuthenticated && !data.isHuLinked && !linkTriggered.current) {
@@ -47,6 +77,13 @@ function LinkPage() {
       oauth2.link({ providerId: "hu", callbackURL: "/link" })
     }
   }, [data])
+
+  useEffect(() => {
+    if (data.isAuthenticated && data.isHuLinked && redirectUrl) {
+      clearRedirectUrl()
+      window.location.href = redirectUrl
+    }
+  }, [data, redirectUrl, clearRedirectUrl])
 
   if (!data.isAuthenticated) {
     return <SignInView />
