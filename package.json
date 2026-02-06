@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "start": "bun dist/server/server.js",
+    "start": "node .output/server/index.mjs",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "test:coverage": "vitest run --coverage",
@@ -31,6 +31,7 @@
     "drizzle-orm": "^0.45.1",
     "googleapis": "^169.0.0",
     "jsonwebtoken": "^9.0.3",
+    "nitro": "^3.0.1-alpha.2",
     "ollama-ai-provider-v2": "^2.0.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
