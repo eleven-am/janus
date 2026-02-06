@@ -12,7 +12,9 @@ export default defineConfig({
     tailwindcss(),
     tsConfigPaths({ projects: ['./tsconfig.json'] }),
     tanstackStart(),
-    nitro(),
+    nitro({
+      traceDeps: ['ws'],
+    }),
     viteReact(),
   ],
   test: {
