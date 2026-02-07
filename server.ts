@@ -1,6 +1,6 @@
-const PORT = parseInt(process.env.PORT || "3000", 10)
+import handler from "./dist/server/server.js"
 
-const handler = await import("./dist/server/server.js").then((m) => m.default)
+const PORT = parseInt(process.env.PORT || "3000", 10)
 
 function serveStaticAsset(pathname: string): Response | null {
   const filePath = `./dist/client${pathname}`

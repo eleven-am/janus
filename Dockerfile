@@ -25,8 +25,10 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/server.ts ./server.ts
 COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/bun.lock ./bun.lock
 
-RUN mkdir -p /data && chown -R app:app /data /app
+RUN bun install --production && chown -R app:app /app
+RUN mkdir -p /data && chown -R app:app /data
 
 VOLUME /data
 
