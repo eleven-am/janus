@@ -3,7 +3,7 @@ JANUS_IMAGE := zot.maix.ovh/janus
 VERSION := $(shell git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
 GIT_SHA := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
-PLATFORMS := linux/amd64,linux/arm64
+PLATFORMS := linux/amd64
 
 .PHONY: build dev test clean release-patch release-minor release-major help
 
@@ -58,7 +58,7 @@ release-major:
 
 clean:
 	docker rmi -f $(JANUS_IMAGE):$(VERSION) $(JANUS_IMAGE):latest 2>/dev/null || true
-	rm -rf .output
+	rm -rf dist
 
 help:
 	@echo "Janus Makefile"
