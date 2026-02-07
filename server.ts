@@ -1,7 +1,4 @@
-import { config } from "./src/config/index.js"
-import { startHuAgent } from "./src/agent/hu-client.js"
-
-const PORT = config.PORT
+const PORT = parseInt(process.env.PORT || "3000", 10)
 
 const handler = await import("./dist/server/server.js").then((m) => m.default)
 
@@ -33,12 +30,3 @@ Bun.serve({
 })
 
 console.log(`[Janus] Server listening on port ${PORT}`)
-
-if (config.HU_URL && config.HU_AGENT_ID) {
-  try {
-    startHuAgent()
-    console.log("[Janus] Hu agent started")
-  } catch (err) {
-    console.error("[Janus] Failed to start Hu agent:", err)
-  }
-}

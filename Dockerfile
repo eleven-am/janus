@@ -6,14 +6,14 @@ COPY package.json bun.lock ./
 
 RUN bun install
 
-FROM oven/bun:1-alpine AS build
+FROM node:22-alpine AS build
 
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-RUN bun run build
+RUN npm run build
 
 FROM oven/bun:1-alpine AS runtime
 
