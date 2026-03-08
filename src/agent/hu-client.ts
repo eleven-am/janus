@@ -9,8 +9,6 @@ import { logError, logInfo, logEvent } from "@/lib/logging.js";
 import { loadPrivateKey } from "@/lib/hu-utils.js";
 
 const SESSION_TTL_MS = 30 * 60 * 1000;
-const RECONNECT_DELAY_MS = 5000;
-const MAX_RECONNECT_ATTEMPTS = 5;
 
 interface HuSession {
   sessionId: string;
@@ -23,7 +21,6 @@ interface HuSession {
 
 const sessions = new Map<string, HuSession>();
 let sessionCleanupInterval: NodeJS.Timeout | null = null;
-let reconnectAttempts = 0;
 
 function cleanupStaleSessions(): void {
   const now = Date.now();
@@ -184,25 +181,6 @@ async function handleUtterance(ctx: UtteranceContext): Promise<void> {
 
 let agent: VoiceAgent | null = null;
 
-function scheduleReconnect(): void {
-  if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-    logError("hu_max_reconnect_attempts", { attempts: reconnectAttempts });
-    return;
-  }
-
-  reconnectAttempts++;
-  const delay = RECONNECT_DELAY_MS * Math.pow(2, reconnectAttempts - 1);
-
-  logInfo("hu_scheduling_reconnect", { attempt: reconnectAttempts, delayMs: delay });
-
-  setTimeout(() => {
-    if (agent) {
-      logInfo("hu_attempting_reconnect", { attempt: reconnectAttempts });
-      agent.connect();
-    }
-  }, delay);
-}
-
 export function startHuAgent(): VoiceAgent {
   if (agent) return agent;
 
@@ -211,7 +189,7 @@ export function startHuAgent(): VoiceAgent {
     privateKey: loadPrivateKey(),
     gatewayUrl: config.HU_URL || "https://voice.maix.ovh",
     mode: ConnectionModes.WebSocket,
-    reconnect: false,
+    reconnect: true,
   });
 
   agent
@@ -240,7 +218,6 @@ export function startHuAgent(): VoiceAgent {
     })
     .onConnect(() => {
       logInfo("hu_connected", {});
-      reconnectAttempts = 0;
       startSessionCleanup();
 
       agent!.registerFilters({
@@ -259,7 +236,6 @@ export function startHuAgent(): VoiceAgent {
     })
     .onError((error) => {
       logError("hu_connection_error", { message: error.message });
-      scheduleReconnect();
     });
 
   agent.connect();
@@ -274,5 +250,4 @@ export function stopHuAgent(): void {
   }
   sessions.clear();
   stopSessionCleanup();
-  reconnectAttempts = 0;
 }

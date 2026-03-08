@@ -15,29 +15,37 @@ import {
   type CreateEventParams,
 } from "./types.js";
 
+const mocks = {
+  getAccessToken: vi.fn(),
+  calendarListList: vi.fn(),
+  calendarListGet: vi.fn(),
+  eventsList: vi.fn(),
+  eventsGet: vi.fn(),
+  eventsInsert: vi.fn(),
+  eventsPatch: vi.fn(),
+  eventsDelete: vi.fn(),
+};
+
 vi.mock("@/config/index.js", () => ({
   config: {
     GOOGLE_CLIENT_ID: "test-client-id",
     GOOGLE_CLIENT_SECRET: "test-client-secret",
+    ANTHROPIC_API_KEY: "test-key",
+    OLLAMA_URL: "http://localhost:11434",
+    HU_AGENT_ID: "test-agent-id",
+    HU_URL: "wss://test.voice.maix.ovh",
+    HU_PRIVATE_KEY_PATH: "/test/private.pem",
   },
 }));
 
-const mockGetAccessToken = vi.fn();
 vi.mock("@/auth/index.js", () => ({
   auth: {
     api: {
-      getAccessToken: () => mockGetAccessToken(),
+      getAccessToken: (...args: unknown[]) => mocks.getAccessToken(...args),
+      getSession: vi.fn(),
     },
   },
 }));
-
-const mockCalendarListList = vi.fn();
-const mockCalendarListGet = vi.fn();
-const mockEventsList = vi.fn();
-const mockEventsGet = vi.fn();
-const mockEventsInsert = vi.fn();
-const mockEventsPatch = vi.fn();
-const mockEventsDelete = vi.fn();
 
 vi.mock("googleapis", () => {
   const MockOAuth2 = class {
@@ -51,15 +59,15 @@ vi.mock("googleapis", () => {
       },
       calendar: vi.fn().mockImplementation(() => ({
         calendarList: {
-          list: () => mockCalendarListList(),
-          get: (params: unknown) => mockCalendarListGet(params),
+          list: (...args: unknown[]) => mocks.calendarListList(...args),
+          get: (...args: unknown[]) => mocks.calendarListGet(...args),
         },
         events: {
-          list: (params: unknown) => mockEventsList(params),
-          get: (params: unknown) => mockEventsGet(params),
-          insert: (params: unknown) => mockEventsInsert(params),
-          patch: (params: unknown) => mockEventsPatch(params),
-          delete: (params: unknown) => mockEventsDelete(params),
+          list: (...args: unknown[]) => mocks.eventsList(...args),
+          get: (...args: unknown[]) => mocks.eventsGet(...args),
+          insert: (...args: unknown[]) => mocks.eventsInsert(...args),
+          patch: (...args: unknown[]) => mocks.eventsPatch(...args),
+          delete: (...args: unknown[]) => mocks.eventsDelete(...args),
         },
       })),
     },
@@ -74,7 +82,7 @@ describe("GoogleCalendarProvider", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     provider = new GoogleCalendarProvider("user-123");
-    mockGetAccessToken.mockResolvedValue({
+    mocks.getAccessToken.mockResolvedValue({
       accessToken: "test-token",
       accessTokenExpiresAt: new Date(Date.now() + 3600000).toISOString(),
     });
@@ -88,7 +96,7 @@ describe("GoogleCalendarProvider", () => {
 
   describe("listCalendars", () => {
     it("returns mapped calendars", async () => {
-      mockCalendarListList.mockResolvedValue({
+      mocks.calendarListList.mockResolvedValue({
         data: {
           items: [
             {
@@ -134,21 +142,21 @@ describe("GoogleCalendarProvider", () => {
     });
 
     it("handles empty calendar list", async () => {
-      mockCalendarListList.mockResolvedValue({ data: { items: [] } });
+      mocks.calendarListList.mockResolvedValue({ data: { items: [] } });
 
       const calendars = await provider.listCalendars();
       expect(calendars).toHaveLength(0);
     });
 
     it("handles missing items array", async () => {
-      mockCalendarListList.mockResolvedValue({ data: {} });
+      mocks.calendarListList.mockResolvedValue({ data: {} });
 
       const calendars = await provider.listCalendars();
       expect(calendars).toHaveLength(0);
     });
 
     it("throws when no access token", async () => {
-      mockGetAccessToken.mockResolvedValue(null);
+      mocks.getAccessToken.mockResolvedValue(null);
 
       await expect(provider.listCalendars()).rejects.toThrow(
         "No Google account linked for this user"
@@ -158,7 +166,7 @@ describe("GoogleCalendarProvider", () => {
 
   describe("getCalendar", () => {
     it("returns mapped calendar", async () => {
-      mockCalendarListGet.mockResolvedValue({
+      mocks.calendarListGet.mockResolvedValue({
         data: {
           id: "calendar-123",
           summary: "Test Calendar",
@@ -171,7 +179,7 @@ describe("GoogleCalendarProvider", () => {
 
       expect(calendar.id).toBe("calendar-123");
       expect(calendar.name).toBe("Test Calendar");
-      expect(mockCalendarListGet).toHaveBeenCalledWith({
+      expect(mocks.calendarListGet).toHaveBeenCalledWith({
         calendarId: "calendar-123",
       });
     });
@@ -179,7 +187,7 @@ describe("GoogleCalendarProvider", () => {
 
   describe("listEvents", () => {
     it("returns mapped events with all parameters", async () => {
-      mockEventsList.mockResolvedValue({
+      mocks.eventsList.mockResolvedValue({
         data: {
           items: [
             {
@@ -228,7 +236,7 @@ describe("GoogleCalendarProvider", () => {
     });
 
     it("maps all-day events correctly", async () => {
-      mockEventsList.mockResolvedValue({
+      mocks.eventsList.mockResolvedValue({
         data: {
           items: [
             {
@@ -251,7 +259,7 @@ describe("GoogleCalendarProvider", () => {
     });
 
     it("maps attendees correctly", async () => {
-      mockEventsList.mockResolvedValue({
+      mocks.eventsList.mockResolvedValue({
         data: {
           items: [
             {
@@ -306,7 +314,7 @@ describe("GoogleCalendarProvider", () => {
     });
 
     it("maps custom reminders correctly", async () => {
-      mockEventsList.mockResolvedValue({
+      mocks.eventsList.mockResolvedValue({
         data: {
           items: [
             {
@@ -341,7 +349,7 @@ describe("GoogleCalendarProvider", () => {
     });
 
     it("maps recurrence correctly", async () => {
-      mockEventsList.mockResolvedValue({
+      mocks.eventsList.mockResolvedValue({
         data: {
           items: [
             {
@@ -368,7 +376,7 @@ describe("GoogleCalendarProvider", () => {
 
   describe("getEvent", () => {
     it("returns single event", async () => {
-      mockEventsGet.mockResolvedValue({
+      mocks.eventsGet.mockResolvedValue({
         data: {
           id: "event-123",
           summary: "Single Event",
@@ -382,7 +390,7 @@ describe("GoogleCalendarProvider", () => {
 
       expect(event.id).toBe("event-123");
       expect(event.summary).toBe("Single Event");
-      expect(mockEventsGet).toHaveBeenCalledWith({
+      expect(mocks.eventsGet).toHaveBeenCalledWith({
         calendarId: "primary",
         eventId: "event-123",
       });
@@ -391,7 +399,7 @@ describe("GoogleCalendarProvider", () => {
 
   describe("createEvent", () => {
     it("creates timed event with all options", async () => {
-      mockEventsInsert.mockResolvedValue({
+      mocks.eventsInsert.mockResolvedValue({
         data: {
           id: "new-event-id",
           summary: "New Meeting",
@@ -416,7 +424,7 @@ describe("GoogleCalendarProvider", () => {
       const event = await provider.createEvent("primary", params);
 
       expect(event.id).toBe("new-event-id");
-      expect(mockEventsInsert).toHaveBeenCalledWith(
+      expect(mocks.eventsInsert).toHaveBeenCalledWith(
         expect.objectContaining({
           calendarId: "primary",
           sendUpdates: "all",
@@ -431,7 +439,7 @@ describe("GoogleCalendarProvider", () => {
     });
 
     it("creates all-day event", async () => {
-      mockEventsInsert.mockResolvedValue({
+      mocks.eventsInsert.mockResolvedValue({
         data: {
           id: "allday-event",
           summary: "Holiday",
@@ -449,7 +457,7 @@ describe("GoogleCalendarProvider", () => {
 
       await provider.createEvent("primary", params);
 
-      expect(mockEventsInsert).toHaveBeenCalledWith(
+      expect(mocks.eventsInsert).toHaveBeenCalledWith(
         expect.objectContaining({
           requestBody: expect.objectContaining({
             start: { date: "2024-01-15" },
@@ -460,7 +468,7 @@ describe("GoogleCalendarProvider", () => {
     });
 
     it("creates event with recurrence", async () => {
-      mockEventsInsert.mockResolvedValue({
+      mocks.eventsInsert.mockResolvedValue({
         data: {
           id: "recurring-event",
           summary: "Weekly Sync",
@@ -483,7 +491,7 @@ describe("GoogleCalendarProvider", () => {
 
       await provider.createEvent("primary", params);
 
-      expect(mockEventsInsert).toHaveBeenCalledWith(
+      expect(mocks.eventsInsert).toHaveBeenCalledWith(
         expect.objectContaining({
           requestBody: expect.objectContaining({
             recurrence: ["RRULE:FREQ=WEEKLY;COUNT=10"],
@@ -493,7 +501,7 @@ describe("GoogleCalendarProvider", () => {
     });
 
     it("creates event with custom reminders", async () => {
-      mockEventsInsert.mockResolvedValue({
+      mocks.eventsInsert.mockResolvedValue({
         data: {
           id: "reminder-event",
           summary: "Reminder Test",
@@ -518,7 +526,7 @@ describe("GoogleCalendarProvider", () => {
 
       await provider.createEvent("primary", params);
 
-      expect(mockEventsInsert).toHaveBeenCalledWith(
+      expect(mocks.eventsInsert).toHaveBeenCalledWith(
         expect.objectContaining({
           requestBody: expect.objectContaining({
             reminders: {
@@ -536,7 +544,7 @@ describe("GoogleCalendarProvider", () => {
 
   describe("updateEvent", () => {
     it("updates event with partial data", async () => {
-      mockEventsPatch.mockResolvedValue({
+      mocks.eventsPatch.mockResolvedValue({
         data: {
           id: "event-to-update",
           summary: "Updated Title",
@@ -552,7 +560,7 @@ describe("GoogleCalendarProvider", () => {
       });
 
       expect(event.summary).toBe("Updated Title");
-      expect(mockEventsPatch).toHaveBeenCalledWith(
+      expect(mocks.eventsPatch).toHaveBeenCalledWith(
         expect.objectContaining({
           calendarId: "primary",
           eventId: "event-to-update",
@@ -565,7 +573,7 @@ describe("GoogleCalendarProvider", () => {
     });
 
     it("updates event times", async () => {
-      mockEventsPatch.mockResolvedValue({
+      mocks.eventsPatch.mockResolvedValue({
         data: {
           id: "event-to-update",
           summary: "Event",
@@ -580,7 +588,7 @@ describe("GoogleCalendarProvider", () => {
         end: { kind: "timed", dateTime: "2024-01-15T15:00:00Z", timeZone: "UTC" },
       });
 
-      expect(mockEventsPatch).toHaveBeenCalledWith(
+      expect(mocks.eventsPatch).toHaveBeenCalledWith(
         expect.objectContaining({
           requestBody: expect.objectContaining({
             start: { dateTime: "2024-01-15T14:00:00Z", timeZone: "UTC" },
@@ -593,11 +601,11 @@ describe("GoogleCalendarProvider", () => {
 
   describe("deleteEvent", () => {
     it("deletes event", async () => {
-      mockEventsDelete.mockResolvedValue({});
+      mocks.eventsDelete.mockResolvedValue({});
 
       await provider.deleteEvent("primary", "event-to-delete");
 
-      expect(mockEventsDelete).toHaveBeenCalledWith({
+      expect(mocks.eventsDelete).toHaveBeenCalledWith({
         calendarId: "primary",
         eventId: "event-to-delete",
       });
@@ -606,30 +614,30 @@ describe("GoogleCalendarProvider", () => {
 
   describe("token caching", () => {
     it("reuses cached token within expiry window", async () => {
-      mockCalendarListList.mockResolvedValue({ data: { items: [] } });
+      mocks.calendarListList.mockResolvedValue({ data: { items: [] } });
 
       await provider.listCalendars();
       await provider.listCalendars();
       await provider.listCalendars();
 
-      expect(mockGetAccessToken).toHaveBeenCalledTimes(1);
+      expect(mocks.getAccessToken).toHaveBeenCalledTimes(1);
     });
 
     it("refreshes token when expired", async () => {
-      mockGetAccessToken.mockResolvedValueOnce({
+      mocks.getAccessToken.mockResolvedValueOnce({
         accessToken: "token-1",
         accessTokenExpiresAt: new Date(Date.now() - 1000).toISOString(),
       });
-      mockGetAccessToken.mockResolvedValueOnce({
+      mocks.getAccessToken.mockResolvedValueOnce({
         accessToken: "token-2",
         accessTokenExpiresAt: new Date(Date.now() + 3600000).toISOString(),
       });
-      mockCalendarListList.mockResolvedValue({ data: { items: [] } });
+      mocks.calendarListList.mockResolvedValue({ data: { items: [] } });
 
       await provider.listCalendars();
       await provider.listCalendars();
 
-      expect(mockGetAccessToken).toHaveBeenCalledTimes(2);
+      expect(mocks.getAccessToken).toHaveBeenCalledTimes(2);
     });
   });
 });
@@ -640,11 +648,11 @@ describe("buildRruleString (via createEvent)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     provider = new GoogleCalendarProvider("user-123");
-    mockGetAccessToken.mockResolvedValue({
+    mocks.getAccessToken.mockResolvedValue({
       accessToken: "test-token",
       accessTokenExpiresAt: new Date(Date.now() + 3600000).toISOString(),
     });
-    mockEventsInsert.mockResolvedValue({
+    mocks.eventsInsert.mockResolvedValue({
       data: {
         id: "test-event",
         summary: "Test",
@@ -663,7 +671,7 @@ describe("buildRruleString (via createEvent)", () => {
       recurrence: { frequency: RecurrenceFrequency.DAILY },
     });
 
-    expect(mockEventsInsert).toHaveBeenCalledWith(
+    expect(mocks.eventsInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         requestBody: expect.objectContaining({
           recurrence: ["RRULE:FREQ=DAILY"],
@@ -680,7 +688,7 @@ describe("buildRruleString (via createEvent)", () => {
       recurrence: { frequency: RecurrenceFrequency.WEEKLY, interval: 2 },
     });
 
-    expect(mockEventsInsert).toHaveBeenCalledWith(
+    expect(mocks.eventsInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         requestBody: expect.objectContaining({
           recurrence: ["RRULE:FREQ=WEEKLY;INTERVAL=2"],
@@ -700,7 +708,7 @@ describe("buildRruleString (via createEvent)", () => {
       },
     });
 
-    expect(mockEventsInsert).toHaveBeenCalledWith(
+    expect(mocks.eventsInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         requestBody: expect.objectContaining({
           recurrence: ["RRULE:FREQ=WEEKLY;COUNT=10"],
@@ -720,7 +728,7 @@ describe("buildRruleString (via createEvent)", () => {
       },
     });
 
-    expect(mockEventsInsert).toHaveBeenCalledWith(
+    expect(mocks.eventsInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         requestBody: expect.objectContaining({
           recurrence: ["RRULE:FREQ=MONTHLY;UNTIL=20241231"],
@@ -740,7 +748,7 @@ describe("buildRruleString (via createEvent)", () => {
       },
     });
 
-    expect(mockEventsInsert).toHaveBeenCalledWith(
+    expect(mocks.eventsInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         requestBody: expect.objectContaining({
           recurrence: ["RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR"],
@@ -760,7 +768,7 @@ describe("buildRruleString (via createEvent)", () => {
       },
     });
 
-    expect(mockEventsInsert).toHaveBeenCalledWith(
+    expect(mocks.eventsInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         requestBody: expect.objectContaining({
           recurrence: ["RRULE:FREQ=MONTHLY;BYMONTHDAY=15"],
@@ -780,7 +788,7 @@ describe("buildRruleString (via createEvent)", () => {
       },
     });
 
-    expect(mockEventsInsert).toHaveBeenCalledWith(
+    expect(mocks.eventsInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         requestBody: expect.objectContaining({
           recurrence: ["RRULE:FREQ=YEARLY;BYMONTH=1,7"],
@@ -802,7 +810,7 @@ describe("buildRruleString (via createEvent)", () => {
       },
     });
 
-    expect(mockEventsInsert).toHaveBeenCalledWith(
+    expect(mocks.eventsInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         requestBody: expect.objectContaining({
           recurrence: ["RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=20;BYDAY=MO,FR"],

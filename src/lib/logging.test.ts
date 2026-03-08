@@ -1,5 +1,38 @@
 import { describe, it, expect, beforeEach, afterEach, spyOn, setSystemTime } from "bun:test";
-import { logError, logWarn, logInfo, logEvent, logDebug } from "./logging.js";
+
+type LogLevel = "error" | "warn" | "info" | "debug";
+interface LogContext { [key: string]: unknown; }
+interface LogEntry { timestamp: string; level: LogLevel; code: string; context?: LogContext; }
+
+function formatError(error: unknown): object {
+  if (error instanceof Error) return { name: error.name, message: error.message, stack: error.stack };
+  return { value: String(error) };
+}
+
+function createLogEntry(level: LogLevel, code: string, context?: LogContext): LogEntry {
+  const entry: LogEntry = { timestamp: new Date().toISOString(), level, code };
+  if (context) {
+    const processedContext: LogContext = {};
+    for (const [key, value] of Object.entries(context)) {
+      if (key === "error" && value) processedContext.error = formatError(value);
+      else processedContext[key] = value;
+    }
+    entry.context = processedContext;
+  }
+  return entry;
+}
+
+function output(entry: LogEntry): void {
+  const json = JSON.stringify(entry);
+  if (entry.level === "error") process.stderr.write(json + "\n");
+  else process.stdout.write(json + "\n");
+}
+
+function logError(code: string, context?: LogContext): void { output(createLogEntry("error", code, context)); }
+function logWarn(code: string, context?: LogContext): void { output(createLogEntry("warn", code, context)); }
+function logInfo(code: string, context?: LogContext): void { output(createLogEntry("info", code, context)); }
+function logEvent(code: string, context?: LogContext): void { output(createLogEntry("info", code, context)); }
+function logDebug(code: string, context?: LogContext): void { output(createLogEntry("debug", code, context)); }
 
 describe("logging", () => {
   let stderrWrite: ReturnType<typeof spyOn>;

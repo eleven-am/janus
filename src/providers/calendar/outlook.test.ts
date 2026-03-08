@@ -19,6 +19,7 @@ vi.mock("@/auth/index.js", () => ({
   auth: {
     api: {
       getAccessToken: () => mockGetAccessToken(),
+      getSession: vi.fn(),
     },
   },
 }));

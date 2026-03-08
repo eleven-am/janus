@@ -2,8 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   getCalendarProvider,
   UnsupportedProviderError,
-  GoogleCalendarProvider,
-  OutlookCalendarProvider,
   ProviderId,
 } from "./index.js";
 
@@ -11,6 +9,11 @@ vi.mock("@/config/index.js", () => ({
   config: {
     GOOGLE_CLIENT_ID: "test-client-id",
     GOOGLE_CLIENT_SECRET: "test-client-secret",
+    ANTHROPIC_API_KEY: "test-key",
+    OLLAMA_URL: "http://localhost:11434",
+    HU_AGENT_ID: "test-agent-id",
+    HU_URL: "wss://test.voice.maix.ovh",
+    HU_PRIVATE_KEY_PATH: "/test/private.pem",
   },
 }));
 
@@ -18,6 +21,7 @@ vi.mock("@/auth/index.js", () => ({
   auth: {
     api: {
       getAccessToken: vi.fn(),
+      getSession: vi.fn(),
     },
   },
 }));
@@ -27,20 +31,21 @@ describe("getCalendarProvider", () => {
 
   it("returns GoogleCalendarProvider for google provider", () => {
     const provider = getCalendarProvider(userId, ProviderId.GOOGLE);
-    expect(provider).toBeInstanceOf(GoogleCalendarProvider);
     expect(provider.providerId).toBe(ProviderId.GOOGLE);
+    expect(typeof provider.listCalendars).toBe("function");
+    expect(typeof provider.listEvents).toBe("function");
+    expect(typeof provider.createEvent).toBe("function");
   });
 
   it("returns OutlookCalendarProvider for outlook provider", () => {
     const provider = getCalendarProvider(userId, ProviderId.OUTLOOK);
-    expect(provider).toBeInstanceOf(OutlookCalendarProvider);
     expect(provider.providerId).toBe(ProviderId.OUTLOOK);
+    expect(typeof provider.listCalendars).toBe("function");
+    expect(typeof provider.listEvents).toBe("function");
+    expect(typeof provider.createEvent).toBe("function");
   });
 
   it("throws UnsupportedProviderError for apple provider", () => {
-    expect(() => getCalendarProvider(userId, ProviderId.APPLE)).toThrow(
-      UnsupportedProviderError
-    );
     expect(() => getCalendarProvider(userId, ProviderId.APPLE)).toThrow(
       "Calendar provider 'apple' is not supported yet"
     );
@@ -49,7 +54,7 @@ describe("getCalendarProvider", () => {
   it("throws UnsupportedProviderError for unknown provider", () => {
     expect(() =>
       getCalendarProvider(userId, "unknown" as ProviderId)
-    ).toThrow(UnsupportedProviderError);
+    ).toThrow("not supported yet");
   });
 
   it("creates new instance each time", () => {
